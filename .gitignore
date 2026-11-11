@@ -1,0 +1,21 @@
+# Configurações e informações sensíveis
+.env
+
+# Dependências
+/vendor/
+/node_modules/
+
+# Arquivos enviados pelos clientes
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+
+# Logs
+/logs/
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
