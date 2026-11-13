@@ -1,0 +1,33 @@
+# ContaFácil — proteção do servidor Apache
+# Requer "AllowOverride All" no diretório do projeto.
+
+DirectoryIndex index.php
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloqueia acesso direto a pastas internas (o código, a configuração,
+    # o SQL e os arquivos enviados só podem ser lidos pela aplicação).
+    RewriteRule ^(app|config|database|storage)(/|$) - [F,L]
+
+    # Bloqueia arquivos ocultos (.env, .git, .htaccess...).
+    RewriteRule (^|/)\. - [F,L]
+</IfModule>
+
+# Limite de upload compatível com o da aplicação (5 MB, config/config.php).
+# Só é aplicado quando o PHP roda como módulo do Apache (ex.: XAMPP, Ubuntu).
+<IfModule mod_php.c>
+    php_value upload_max_filesize 6M
+    php_value post_max_size 8M
+</IfModule>
+
+# Proteção extra caso mod_rewrite esteja desativado.
+<IfModule !mod_rewrite.c>
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+    <FilesMatch "\.(sql|example)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>

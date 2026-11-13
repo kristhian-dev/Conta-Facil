@@ -1,0 +1,4 @@
+# Segunda camada de proteção: nada em storage/ pode ser acessado ou executado
+# diretamente pela web. Os arquivos enviados são entregues somente pela rota
+# autenticada index.php?r=documentos/arquivo.
+Require all denied
