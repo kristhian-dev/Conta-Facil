@@ -310,14 +310,30 @@ final class ClienteController extends Controller
      */
     private function mensagemVinculos(array $vinculos): string
     {
-        $partes = array_filter([
-            plural($vinculos['obrigacoes'], 'obrigação', 'obrigações'),
-            plural($vinculos['documentos'], 'documento', 'documentos'),
-            plural($vinculos['usuarios'], 'usuário de acesso', 'usuários de acesso'),
-        ]);
+        // [quantidade, singular, plural, termo feminino?] — só entram os itens existentes.
+        $itens = array_values(array_filter([
+            [$vinculos['obrigacoes'], 'obrigação', 'obrigações', true],
+            [$vinculos['documentos'], 'documento', 'documentos', false],
+            [$vinculos['usuarios'], 'usuário de acesso', 'usuários de acesso', false],
+        ], static fn (array $item): bool => $item[0] > 0));
 
-        return 'Este cliente não pode ser excluído porque possui ' . implode(', ', $partes)
-            . ' vinculado(s). Nenhum registro foi apagado. Para retirá-lo do acompanhamento, '
+        $orientacao = ' Nenhum registro foi apagado. Para retirá-lo do acompanhamento, '
             . 'edite o cliente e altere a situação para "Inativo".';
+
+        if ($itens === []) {
+            return 'Este cliente não pode ser excluído porque possui registros vinculados.' . $orientacao;
+        }
+
+        $partes = array_map(static fn (array $item): string => plural($item[0], $item[1], $item[2]), $itens);
+        $ultima = array_pop($partes);
+        $lista  = $partes === [] ? $ultima : implode(', ', $partes) . ' e ' . $ultima;
+
+        // "vinculado" concorda com o conjunto: plural se houver mais de um item;
+        // feminino apenas quando todos os termos são femininos.
+        $varios   = count($itens) > 1 || $itens[0][0] > 1;
+        $feminino = array_filter($itens, static fn (array $item): bool => !$item[3]) === [];
+
+        return 'Este cliente não pode ser excluído porque possui ' . $lista . ' '
+            . 'vinculad' . ($feminino ? 'a' : 'o') . ($varios ? 's' : '') . '.' . $orientacao;
     }
 }

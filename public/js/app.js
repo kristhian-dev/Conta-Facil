@@ -87,17 +87,71 @@
         filtrar();
     });
 
-    /* Aviso imediato de arquivo acima do limite (o servidor valida de qualquer forma). */
+    /* Limite de tamanho de arquivo (complementar: o servidor valida de qualquer forma).
+       Ao escolher o arquivo, mostra o erro no campo; no envio, impede a transmissão
+       enquanto o arquivo estiver acima do limite. */
+    var erroDeTamanho = function (campo) {
+        var limite = parseInt(campo.getAttribute('data-limite'), 10);
+        var arquivo = campo.files && campo.files[0];
+        return arquivo && limite > 0 && arquivo.size > limite
+            ? 'O arquivo excede o tamanho máximo de ' + (limite / 1048576).toFixed(1).replace('.', ',')
+                + ' MB. Escolha um arquivo menor.'
+            : '';
+    };
+
+    /* Mostra/remove a mensagem no mesmo formato dos erros do servidor (.campo-erro).
+       Um erro vindo do servidor é preservado e volta a aparecer quando o tamanho fica correto. */
+    var exibirErroDeArquivo = function (campo, mensagem) {
+        var bloco = campo.closest('.campo') || campo.parentNode;
+        var id = campo.id + '-erro';
+        var erro = document.getElementById(id);
+
+        if (mensagem) {
+            if (!erro) {
+                erro = document.createElement('p');
+                erro.className = 'campo-erro';
+                erro.id = id;
+                erro.setAttribute('data-navegador', '');
+                bloco.appendChild(erro);
+            } else if (!erro.hasAttribute('data-texto-servidor') && !erro.hasAttribute('data-navegador')) {
+                erro.setAttribute('data-texto-servidor', erro.textContent);
+            }
+            erro.textContent = mensagem;
+            bloco.classList.add('campo-invalido');
+            campo.setAttribute('aria-invalid', 'true');
+            campo.setAttribute('aria-describedby', id);
+        } else if (erro && erro.hasAttribute('data-navegador')) {
+            erro.remove();
+            bloco.classList.remove('campo-invalido');
+            campo.removeAttribute('aria-invalid');
+            campo.removeAttribute('aria-describedby');
+        } else if (erro && erro.hasAttribute('data-texto-servidor')) {
+            erro.textContent = erro.getAttribute('data-texto-servidor');
+            erro.removeAttribute('data-texto-servidor');
+        }
+        campo.setCustomValidity(mensagem);
+    };
+
     document.querySelectorAll('input[type="file"][data-limite]').forEach(function (campo) {
         campo.addEventListener('change', function () {
-            var limite = parseInt(campo.getAttribute('data-limite'), 10);
-            var arquivo = campo.files && campo.files[0];
-            campo.setCustomValidity(arquivo && arquivo.size > limite
-                ? 'O arquivo excede o tamanho máximo de ' + (limite / 1048576).toFixed(1).replace('.', ',') + ' MB.'
-                : '');
-            campo.reportValidity();
+            exibirErroDeArquivo(campo, erroDeTamanho(campo));
         });
     });
+
+    /* Fase de captura: roda antes dos demais tratadores de envio (ex.: confirmação). */
+    document.addEventListener('submit', function (evento) {
+        var campos = evento.target.querySelectorAll('input[type="file"][data-limite]');
+        for (var i = 0; i < campos.length; i++) {
+            var mensagem = erroDeTamanho(campos[i]);
+            if (mensagem) {
+                evento.preventDefault();
+                evento.stopPropagation();
+                exibirErroDeArquivo(campos[i], mensagem);
+                campos[i].focus();
+                return;
+            }
+        }
+    }, true);
 
     /* Formulário de cliente: mostra os campos conforme o tipo de pessoa */
     var formCliente = document.querySelector('[data-form-cliente]');

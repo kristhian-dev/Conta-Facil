@@ -23,6 +23,7 @@ $menu = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e(isset($titulo) ? $titulo . ' — ' . config('app.nome') : config('app.nome')) ?></title>
+    <link rel="icon" type="image/svg+xml" href="<?= e(asset('img/favicon.svg')) ?>">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
     <script src="<?= e(asset('js/app.js')) ?>" defer></script>
 </head>
