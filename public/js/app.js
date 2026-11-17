@@ -173,4 +173,31 @@
         });
         atualizarTipo();
     }
+
+    /* WhatsApp (ficha do cliente): o modelo escolhido preenche a mensagem e o link
+       acompanha a edição. Nada é enviado pelo sistema: o link só abre a conversa. */
+    document.querySelectorAll('[data-whatsapp]').forEach(function (bloco) {
+        var numero = bloco.getAttribute('data-whatsapp') || '';
+        var link = bloco.querySelector('[data-whatsapp-link]');
+        var mensagem = bloco.querySelector('[data-whatsapp-mensagem]');
+        var modelo = bloco.querySelector('[data-whatsapp-modelo]');
+        if (!link || !mensagem || !/^55\d{10,11}$/.test(numero)) {
+            return;
+        }
+
+        var atualizarLink = function () {
+            var texto = mensagem.value.trim();
+            link.href = 'https://wa.me/' + numero + (texto ? '?text=' + encodeURIComponent(texto) : '');
+        };
+
+        if (modelo) {
+            modelo.addEventListener('change', function () {
+                var opcao = modelo.options[modelo.selectedIndex];
+                mensagem.value = opcao ? (opcao.getAttribute('data-mensagem') || '') : '';
+                atualizarLink();
+            });
+        }
+        mensagem.addEventListener('input', atualizarLink);
+        atualizarLink();
+    });
 })();

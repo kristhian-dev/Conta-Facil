@@ -240,3 +240,59 @@ function atributos_erro(array $erros, string $campo): string
         ? ' aria-invalid="true" aria-describedby="' . e($campo) . '-erro"'
         : '';
 }
+
+/**
+ * Número de telefone no formato do WhatsApp (55 + DDD + número, só dígitos),
+ * ou null quando não é possível gerar um link confiável.
+ *
+ * Regras:
+ *   - ignora tudo que não for dígito; aceita o código do país (55) já digitado;
+ *   - exige 10 dígitos (fixo: começa com 2 a 5) ou 11 dígitos (celular: começa com 9);
+ *   - exige um DDD brasileiro existente.
+ * Não altera a validação do cadastro: é usada apenas para montar links.
+ */
+function telefone_whatsapp(?string $telefone): ?string
+{
+    static $ddds = [11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 27, 28, 31, 32, 33, 34, 35, 37, 38,
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 51, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+        71, 73, 74, 75, 77, 79, 81, 82, 83, 84, 85, 86, 87, 88, 89, 91, 92, 93, 94, 95, 96, 97, 98, 99];
+
+    $digitos = (string) preg_replace('/\D/', '', (string) $telefone);
+
+    // Código do país já digitado: 55 + 10 ou 11 dígitos.
+    if (in_array(strlen($digitos), [12, 13], true) && str_starts_with($digitos, '55')) {
+        $digitos = substr($digitos, 2);
+    }
+
+    $tamanho = strlen($digitos);
+    if (($tamanho !== 10 && $tamanho !== 11) || !in_array((int) substr($digitos, 0, 2), $ddds, true)) {
+        return null;
+    }
+
+    $inicio = $digitos[2];
+    $valido = $tamanho === 11 ? $inicio === '9' : in_array($inicio, ['2', '3', '4', '5'], true);
+
+    return $valido ? '55' . $digitos : null;
+}
+
+/** Indica se um número retornado por telefone_whatsapp() é de telefone fixo (pode não ter WhatsApp). */
+function whatsapp_fixo(string $numero): bool
+{
+    return strlen($numero) === 12;
+}
+
+/**
+ * Link "clique para conversar" do WhatsApp com mensagem pré-preenchida.
+ * Apenas abre a conversa: o envio é sempre feito pelo usuário no WhatsApp.
+ * Na saída HTML, o resultado deve passar por e().
+ */
+function link_whatsapp(string $numero, string $mensagem): string
+{
+    if (!preg_match('/^55\d{10,11}$/', $numero)) {
+        throw new InvalidArgumentException('Número de WhatsApp inválido.');
+    }
+
+    $mensagem = trim($mensagem);
+
+    return 'https://wa.me/' . $numero . ($mensagem !== '' ? '?text=' . rawurlencode($mensagem) : '');
+}

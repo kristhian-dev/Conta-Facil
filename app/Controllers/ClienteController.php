@@ -14,6 +14,8 @@ use App\Core\Session;
 use App\Core\Validator;
 use App\Models\Cliente;
 use App\Models\Usuario;
+use App\Services\MensagemWhatsapp;
+use App\Services\RadarService;
 use PDOException;
 
 /**
@@ -70,7 +72,33 @@ final class ClienteController extends Controller
             'titulo'   => $cliente['razao_social'],
             'cliente'  => $cliente,
             'vinculos' => $this->clientes->contarVinculos((int) $cliente['id']),
+            'whatsapp' => $this->dadosWhatsapp($cliente),
         ]);
+    }
+
+    /**
+     * Contato pelo WhatsApp na ficha (link wa.me; nada é enviado nem gravado).
+     * Null para clientes inativos ou com telefone ausente/inválido.
+     *
+     * @return array{numero: string, exibicao: string, fixo: bool, modelos: array}|null
+     */
+    private function dadosWhatsapp(array $cliente): ?array
+    {
+        $numero = $cliente['status'] === 'ativo' ? telefone_whatsapp($cliente['telefone']) : null;
+        if ($numero === null) {
+            return null;
+        }
+
+        // Pendências do cliente pelas mesmas regras do Radar (somente leitura).
+        $radar      = (new RadarService())->analisar((int) $cliente['id']);
+        $pendencias = $radar['clientes'][0]['pendencias'] ?? [];
+
+        return [
+            'numero'   => $numero,
+            'exibicao' => formatar_telefone(substr($numero, 2)),
+            'fixo'     => whatsapp_fixo($numero),
+            'modelos'  => MensagemWhatsapp::modelos($cliente, $pendencias, (string) (Auth::usuario()['nome'] ?? '')),
+        ];
     }
 
     /**
